@@ -15,7 +15,7 @@ let users = [];
 try {
   users = JSON.parse(fs.readFileSync("./user.json"));
 } catch (error) {
-  console.log('error')
+  console.log("error");
 }
 
 const saveToFile = (object) => {
@@ -34,30 +34,59 @@ bot.help((ctx) => {
   );
 });
 
-bot.command("menu", (ctx) => {
+bot.command("play", (ctx) => {
   ctx.reply("Choose an option", {
     reply_markup: {
       inline_keyboard: [
-        [
-          { text: "Even", callback_data: "even" },
-          { text: "Odd", callback_data: "odd" },
-        ],
+        [{ text: "Even", callback_data: "even" }],
+        [{ text: "Odd", callback_data: "odd" }],
       ],
     },
   });
 });
 
-bot.on("callback_query", (ctx) => {
+// bot.command("play", (ctx) => {
+//   ctx.reply("Choose an option", {
+//     reply_markup: {
+//       keyboard: [[{ text: "Even" }, { text: "Odd" }]],
+//       one_time_keyboard: true,
+//       resize_keyboard: true,
+//     },
+//   });
+// });
+
+bot.on("callback_query", async (ctx) => {
   const user_choice = ctx.callbackQuery.data;
+
+  if (user_choice === "disabled") {
+    await ctx.answerCbQuery();
+    return;
+  }
 
   const random_number = Math.floor(Math.random() * 100);
   const isEven = random_number % 2 === 0 ? "even" : "odd";
 
-  ctx.answerCbQuery();
-  ctx.editMessageReplyMarkup();
+  await ctx.answerCbQuery();
+  // await ctx.editMessageText(`You choose ${user_choice}`);
+  await ctx.editMessageReplyMarkup({
+    inline_keyboard: [
+      [
+        {
+          text: "Even" + (isEven === "even" ? " ✅" : " ❌"),
+          callback_data: "disabled",
+        },
+      ],
+      [
+        {
+          text: "Odd" + (isEven === "even" ? " ❌" : " ✅"),
+          callback_data: "disabled",
+        },
+      ],
+    ],
+  });
 
   return ctx.reply(
-    `You Choose: ${user_choice}. The random number was ${random_number}, which is ${isEven}. Your guess was ${
+    `The random number was ${random_number}, which is ${isEven}. Your guess was ${
       isEven === user_choice ? "correct" : "incorrect"
     }`
   );
@@ -104,10 +133,11 @@ bot.on(message("sticker"), (ctx) => ctx.reply("Sorry, I only support texts"));
 
 await bot.telegram.setMyCommands([
   { command: "start", description: "Starts the bot" },
-  { command: "menu", description: "Starts menu to choose options" },
+  { command: "play", description: "Starts odd even guess game" },
   { command: "help", description: "To know details" },
 ]);
 
 // catch and launch
 bot.catch((err) => console.error("Bot error:", err));
-bot.launch();
+bot.launch({ polling: true });
+
