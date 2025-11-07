@@ -1,4 +1,5 @@
 import "dotenv/config";
+import express from "express";
 import { session, Telegraf } from "telegraf";
 import { message } from "telegraf/filters";
 import fs from "fs";
@@ -141,3 +142,8 @@ await bot.telegram.setMyCommands([
 bot.catch((err) => console.error("Bot error:", err));
 bot.launch({ polling: true });
 
+
+const PORT = process.env.PORT || 3000;
+const app = express();
+app.get("/", (req, res) => res.send("Bot is running"));
+app.listen(PORT, () => console.log(`Listening on port ${PORT}`));
