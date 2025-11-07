@@ -140,8 +140,10 @@ await bot.telegram.setMyCommands([
 
 // catch and launch
 bot.catch((err) => console.error("Bot error:", err));
-bot.launch({ polling: true });
 
+(async function () {
+  await bot.launch({ polling: true });
+})();
 
 const PORT = process.env.PORT || 3000;
 const app = express();
