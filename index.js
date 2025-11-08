@@ -56,6 +56,73 @@ bot.command("play", (ctx) => {
 //   });
 // });
 
+bot.command('broadcast', (ctx)=>{
+  if(ctx.from.id===8381198928){
+    ctx.session.state = "broadcast_stage";
+    return ctx.reply('Provide the message you would like to broadcast');
+  } else {
+    return ctx.reply("Unauthorized");
+  }
+})
+
+
+bot.on(message("text"), async (ctx) => {
+  const state = ctx.session.state;
+  const user_input = ctx.message.text;
+
+  if (state === "awaiting_name") {
+    //check if <name></name> can be taken. true for demo
+
+    // code to save the name temporarily
+    ctx.session.name = user_input;
+
+    ctx.session.state = "awaiting_email";
+    return ctx.reply(`Thanks ${user_input}. What's your email?`);
+  }
+
+  if (state === "awaiting_email") {
+    //check if email can be taken. true for demo
+
+    // code to save the name and email
+    saveToFile({ name: ctx.session.name, email: user_input, id: ctx.from.id });
+
+    ctx.session.state = null;
+    return ctx.reply(
+      `Thanks for providing your email. Your name and email are saved`
+    );
+  }
+
+  if (state==="broadcast_stage"){
+    const users = JSON.parse(fs.readFileSync('user.json'));
+
+    ctx.reply("Sending started");
+
+    let sentCount = 0;
+    let failCount = 0;
+
+    for(const each of users){
+      const id =each.id;
+
+      if(id){
+        await ctx.telegram.sendMessage(id, user_input)
+        sentCount++;
+      } else {
+        failCount++;
+      }
+
+      await new Promise((res) => setTimeout(res, 1000));
+    }
+
+    return ctx.reply(`Sent ${sentCount}. Failed ${failCount}`);
+  }
+
+  return ctx.reply(
+    `Hello ${
+      ctx.session.name || ctx.from.first_name || "there"
+    }. You said ${user_input}`
+  );
+});
+
 bot.on("callback_query", async (ctx) => {
   const user_choice = ctx.callbackQuery.data;
 
@@ -93,38 +160,6 @@ bot.on("callback_query", async (ctx) => {
   );
 });
 
-bot.on(message("text"), (ctx) => {
-  const state = ctx.session.state;
-  const userReply = ctx.message.text;
-
-  if (state === "awaiting_name") {
-    //check if <name></name> can be taken. true for demo
-
-    // code to save the name temporarily
-    ctx.session.name = userReply;
-
-    ctx.session.state = "awaiting_email";
-    return ctx.reply(`Thanks ${userReply}. What's your email?`);
-  }
-
-  if (state === "awaiting_email") {
-    //check if email can be taken. true for demo
-
-    // code to save the name and email
-    saveToFile({ name: ctx.session.name, email: userReply });
-
-    ctx.session.state = null;
-    return ctx.reply(
-      `Thanks for providing your email. Your name and email are saved`
-    );
-  }
-
-  return ctx.reply(
-    `Hello ${
-      ctx.session.name || ctx.from.first_name || "there"
-    }. You said ${userReply}`
-  );
-});
 
 // doesn't support
 bot.on(message("photo"), (ctx) => ctx.reply("Sorry, I only support texts"));
@@ -132,18 +167,20 @@ bot.on(message("video"), (ctx) => ctx.reply("Sorry, I only support texts"));
 bot.on(message("document"), (ctx) => ctx.reply("Sorry, I only support texts"));
 bot.on(message("sticker"), (ctx) => ctx.reply("Sorry, I only support texts"));
 
+// set commands
 await bot.telegram.setMyCommands([
   { command: "start", description: "Starts the bot" },
   { command: "play", description: "Starts odd even guess game" },
   { command: "help", description: "To know details" },
+  { command: "broadcast", description: "To broadcast to all users" },  
 ]);
 
 // catch and launch
 bot.catch((err) => console.error("Bot error:", err));
-
 (async function () {
   await bot.launch({ polling: true });
 })();
+
 
 const PORT = process.env.PORT || 3000;
 const app = express();
